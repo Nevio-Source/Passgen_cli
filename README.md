@@ -32,7 +32,8 @@ E#t    ;##D.    L##, EG.      EG.              .G#t        tt ..         G#E
 6. [Funktionalität](#funktionalität)  
 7. [Verständlichkeit](#verständlichkeit)  
 8. [Stärken](#stärken)  
-9. [Fazit](#fazit)  
+9. [Fazit](#fazit)
+10. [Instalation](#instalation)
 
 ---
 
@@ -191,3 +192,22 @@ of this software and associated documentation files (the "Software"), to use, co
 modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
 provided that the above copyright notice and this permission notice are included
 in all copies or substantial portions of the Software.
+```
+---
+
+## Instalation
+**Windows**
+1. Gehen sie auf Release
+2. Laden sie sich die neuste version runter ```Passgen-windows.exe```
+3.Starten sie dass Programm durch Doppel-Klick auf ```Passgen-windows.exe```
+
+**Linux**
+1. Gehen sie auf Release
+2. Laden sie sich dass neuste binary runter ```Passgen-linux-binary```
+3. Navigieren sie zum Donwload Ordner
+4. Öfnnen sie dass terminal und geben sie mit diesem befehl ``` sudo chmod+x Passgen-linux-binary ``` die nötigen berechtigungen
+5. Starten sie dass Programm mit ```./Passgen-linux-binary```
+
+
+
+
