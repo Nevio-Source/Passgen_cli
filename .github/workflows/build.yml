@@ -1,4 +1,4 @@
-name: Build Debian & Windows Release
+name: im-shit
 
 on:
   release:
