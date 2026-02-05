@@ -21,6 +21,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 🔧 HIER der Fix
+      - name: Install prerequisites (Debian)
+        if: matrix.os == 'debian:bookworm-slim'
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -55,7 +62,6 @@ jobs:
       - name: Build Debian package
         shell: bash
         run: |
-          # Entfernt führendes "v" falls Tag "v1.2.3"
           DEB_VER="${VERSION#v}"
 
           mkdir -p pkg/usr/local/bin
