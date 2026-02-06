@@ -2,30 +2,23 @@ name: Build and Publish Release Assets
 
 on:
   release:
-    types: [published]       # ← changed to published (most common choice)
+    types: [published]
 
 permissions:
-  contents: write            # Required to upload assets to the release
+  contents: write           # Required to upload to release
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - container: debian:bookworm-slim
-            rid: linux-x64
-          - os: windows-latest
-            rid: win-x64
-
-    container: ${{ matrix.container }}   # only set when defined
+    container: debian:bookworm-slim
 
     steps:
-      - name: Install prerequisites (for Debian slim)
-        if: matrix.container != ''
+      - name: Install prerequisites (curl for setup-dotnet + build tools)
         run: |
           apt-get update -y
-          apt-get install -y --no-install-recommends curl ca-certificates
+          apt-get install -y --no-install-recommends \
+            curl ca-certificates \
+            zip ruby ruby-dev build-essential
           rm -rf /var/lib/apt/lists/*
 
       - name: Checkout code
@@ -36,35 +29,22 @@ jobs:
         with:
           dotnet-version: '8.x'
 
-      # ... rest of your steps (restore, publish, etc.)
-
       - name: Restore dependencies
         run: dotnet restore
 
-      # Adjust "PassgenCli" to your actual project/executable name!
-      - name: Build Linux (single-file)
+      - name: Publish Linux (single-file)
         run: |
           dotnet publish -c Release -r linux-x64 --self-contained true \
             /p:PublishSingleFile=true \
             --output ./publish/linux
 
-      - name: Build Windows (single-file)
-        run: |
-          dotnet publish -c Release -r win-x64 --self-contained true \
-            /p:PublishSingleFile=true \
-            --output ./publish/windows
-
-      - name: Install fpm (effing package management)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential
-          sudo gem install --no-document fpm
+      - name: Install fpm
+        run: gem install --no-document fpm
 
       - name: Create Debian package
         run: |
           VERSION="${{ github.event.release.tag_name }}"
-          # Remove 'v' prefix if your tags are v1.2.3 → 1.2.3
-          VERSION="${VERSION#v}"
+          VERSION="${VERSION#v}"   # remove optional 'v' prefix
 
           fpm -s dir -t deb \
             -n passgencli \
@@ -74,23 +54,56 @@ jobs:
             --prefix /usr/local/bin \
             --maintainer "Your Name <your.email@example.com>" \
             --description "Password generator CLI tool" \
-            --url "https://github.com/yourusername/yourrepo" \
+            --url "https://github.com/${{ github.repository }}" \
             --license "MIT" \
             ./publish/linux/passgencli=/usr/local/bin/passgencli
 
-          # Optional: also zip/tar the binaries for easier download
+          # Create zip too
           zip -j passgencli-linux-x64.zip ./publish/linux/passgencli
-          zip -j passgencli-windows-x64.zip ./publish/windows/passgencli.exe
 
-      - name: Upload Release Assets
+      - name: Upload Linux assets
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
           artifactErrorsFailBuild: true
-          artifacts: >
-            ./publish/linux/passgencli,
-            ./publish/windows/passgencli.exe,
-            ./passgencli_*.deb,
-            ./passgencli-linux-x64.zip,
+          artifacts: |
+            ./publish/linux/passgencli
+            ./passgencli_*.deb
+            ./passgencli-linux-x64.zip
+          tag: ${{ github.event.release.tag_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish Windows (single-file)
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true `
+            /p:PublishSingleFile=true `
+            --output ./publish/windows
+
+      - name: Create Windows zip
+        run: Compress-Archive -Path ./publish/windows/passgencli.exe -DestinationPath passgencli-windows-x64.zip -Force
+
+      - name: Upload Windows assets
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: |
+            ./publish/windows/passgencli.exe
             ./passgencli-windows-x64.zip
+          tag: ${{ github.event.release.tag_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
