@@ -32,12 +32,11 @@ jobs:
     - name: Build Linux
       run: |
         dotnet publish -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true -o ./publish/linux
-      shell: bash
 
     - name: Build Windows
       run: |
         dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o ./publish/windows
-      shell: bash
+
 
 
       #######################################################################
@@ -68,11 +67,13 @@ jobs:
         echo "Current directory:"
         ls
 
-   # - name: List files to upload
-    #  run: |
-     #   ls -l ./publish/linux/passgen_cli
-      #  ls -l ./publish/windows/passgen_cli.exe
-       # ls -l ./passgen_cli_${{ steps.get_version.outputs.VERSION }}_amd64.deb
+    - name: List build outputs
+      run: |
+        echo "Linux build output:"
+        ls -l ./publish/linux/
+        echo "Windows build output:"
+        ls -l ./publish/windows/
+
 
 
     - name: Get release
@@ -83,7 +84,7 @@ jobs:
 
 
 
-    - name: Upload Release Assets
+    - name: Upload Linux Asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -92,7 +93,7 @@ jobs:
         asset_path: ./publish/linux/passgen_cli
         asset_name: passgen_cli_linux
         asset_content_type: application/octet-stream
-
+    
     - name: Upload Windows Asset
       uses: actions/upload-release-asset@v1
       env:
@@ -102,16 +103,7 @@ jobs:
         asset_path: ./publish/windows/passgen_cli.exe
         asset_name: passgen_cli_windows.exe
         asset_content_type: application/octet-stream
-
-    - name: Upload Debian Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.get_release.outputs.upload_url }}
-        asset_path: ./passgen_cli_${{ github.ref_name }}_amd64.deb
-        asset_name: passgen_cli_${{ github.ref_name }}_amd64.deb
-        asset_content_type: application/vnd.debian.binary-package
+    
 
 
 
