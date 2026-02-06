@@ -10,11 +10,16 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '8.0'  # Anpassen an Ihre .NET Version
+
+    - name: dotnet-install
+      run: |
+        wget https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        rm packages-microsoft-prod.deb
+        sudo apt-get update && \ sudo apt-get install -y dotnet-sdk-8.0
+
+        sudo apt-get install -y dotnet-runtime-8.0
+      
     
     - name: Build Windows Binary
       run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
@@ -30,7 +35,7 @@ jobs:
         echo "Package: passgen-cli" > deb_package/DEBIAN/control
         echo "Version: 1.0" >> deb_package/DEBIAN/control
         echo "Architecture: amd64" >> deb_package/DEBIAN/control
-        echo "Maintainer: Your Name <your.email@example.com>" >> deb_package/DEBIAN/control
+        echo "Maintainer: Your Name <Nevio>" >> deb_package/DEBIAN/control
         echo "Description: Password Generator CLI" >> deb_package/DEBIAN/control
         dpkg-deb --build deb_package
     
