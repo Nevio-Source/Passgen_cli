@@ -1,72 +1,53 @@
-name: Build-and-Release
+name: Build Releases
 
 on:
   release:
     types: [created]
 
 jobs:
-  build-and-release:
+  build:
+
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-    - name: Install curl
-      run: sudo apt-get update && sudo apt-get install -y curl
-
-    - name: Install dpkg-deb
-      run: sudo apt-get update && sudo apt-get install -y dpkg
-      
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '8.x'
 
-    
-    - name: Build Windows Binary
-      run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
-    
-    - name: Build Linux Binary
-      run: dotnet publish -c Release -r linux-x64 -p:PublishSingleFile=true --self-contained true
-    
-    - name: Create Debian Package
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build Linux
       run: |
-        mkdir -p deb_package/DEBIAN
-        mkdir -p deb_package/usr/local/bin
-        cp bin/Release/net8.0/linux-x64/publish/Passgen_cli deb_package/usr/local/bin/
-        echo "Package: passgen-cli" > deb_package/DEBIAN/control
-        echo "Version: 1.0" >> deb_package/DEBIAN/control
-        echo "Architecture: amd64" >> deb_package/DEBIAN/control
-        echo "Maintainer: Nevio <your.email@example.com>" >> deb_package/DEBIAN/control
-        echo "Description: Password Generator CLI" >> deb_package/DEBIAN/control
-        dpkg-deb --build deb_package
-    
+        dotnet publish -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true --output ./publish/linux
+      shell: bash
+
+    - name: Build Windows
+      run: |
+        dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true --output ./publish/windows
+      shell: bash
+
+    - name: Install fpm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ruby ruby-dev build-essential
+        sudo gem install -no‑document fpm
+    - name: Create Debian package
+      run: |
+        VERSION=${{ github.event.release.tag_name }}
+        fpm -s dir -t deb -n passgencli -v $VERSION \
+          --prefix /usr/local/bin ./publish/linux/
+      shell: bash
+
     - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ncipollo/release-action@v1
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./bin/Release/net8.0/win-x64/publish/Passgen_cli.exe
-        asset_name: Passgen_cli_windows.exe
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Linux Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./bin/Release/net8.0/linux-x64/publish/Passgen_cli
-        asset_name: Passgen_cli_linux
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Debian Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./deb_package.deb
-        asset_name: passgen-cli.deb
-        asset_content_type: application/vnd.debian.binary-package
+        artifacts: |
+          publish/linux/Passgen*
+          publish/windows/Passgen*.exe
+          passgencli_${{ github.event.release.tag_name }}_amd64.deb
+        tag: ${{ github.event.release.tag_name }}
