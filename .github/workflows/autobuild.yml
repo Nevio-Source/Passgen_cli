@@ -9,18 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-    - name: dotnet-install
-      run: |
-        sudo apt install curl wget -y
-        wget https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        rm packages-microsoft-prod.deb
-        sudo apt-get update && \ sudo apt-get install -y dotnet-sdk-8.0
-
-        sudo apt-get install -y dotnet-runtime-8.0
-      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
     
     - name: Build Windows Binary
       run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
@@ -32,11 +26,11 @@ jobs:
       run: |
         mkdir -p deb_package/DEBIAN
         mkdir -p deb_package/usr/local/bin
-        cp bin/Release/net6.0/linux-x64/publish/Passgen_cli deb_package/usr/local/bin/
+        cp bin/Release/net8.0/linux-x64/publish/Passgen_cli deb_package/usr/local/bin/
         echo "Package: passgen-cli" > deb_package/DEBIAN/control
         echo "Version: 1.0" >> deb_package/DEBIAN/control
         echo "Architecture: amd64" >> deb_package/DEBIAN/control
-        echo "Maintainer: Your Name <Nevio>" >> deb_package/DEBIAN/control
+        echo "Maintainer: Nevio <your.email@example.com>" >> deb_package/DEBIAN/control
         echo "Description: Password Generator CLI" >> deb_package/DEBIAN/control
         dpkg-deb --build deb_package
     
@@ -46,7 +40,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./bin/Release/net6.0/win-x64/publish/Passgen_cli.exe
+        asset_path: ./bin/Release/net8.0/win-x64/publish/Passgen_cli.exe
         asset_name: Passgen_cli_windows.exe
         asset_content_type: application/octet-stream
     
@@ -56,7 +50,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./bin/Release/net6.0/linux-x64/publish/Passgen_cli
+        asset_path: ./bin/Release/net8.0/linux-x64/publish/Passgen_cli
         asset_name: Passgen_cli_linux
         asset_content_type: application/octet-stream
     
