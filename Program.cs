@@ -101,7 +101,7 @@ namespace myapp
 
 
 
-        static async Task<string> gethash()
+        static string gethash()
         {
             using HttpClient client = new HttpClient();
 
@@ -142,7 +142,7 @@ namespace myapp
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Time error → retrying in 500ms...");
                     Console.ForegroundColor = ConsoleColor.White;
-                    await Task.Delay(500); // Short pause to prevent spaming 
+                    Task.Delay(500); // Short pause to prevent spaming 
                 }
             }
             byte[] randomData = new byte[32];
@@ -272,13 +272,13 @@ namespace myapp
                     Console.ResetColor();
                     length_re = 1000;
                 }
-                string hash = await gethash();
+                string hash = gethash();
                 byte[] bytes = Convert.FromHexString(hash);
 
                 // Hash verlängern, wenn nicht genug Bytes vorhanden
                 while (bytes.Length < length_re)
                 {
-                    hash += await gethash();
+                    hash += gethash();
                     bytes = Convert.FromHexString(hash);
                 }
 
