@@ -18,215 +18,179 @@ E#t      ;##D.    L##, EG.      EG.              .G#t        tt ..         G#E
 
 
 **Created By:**
-@Nevio_Pongiluppi
+@Neevio-Source
 
----
+A secure password generator which usses strong entropi 
 
-## Inhalt
 
-1. [Idee / Nutzen](#idee--nutzen)  
-2. [Programmbeschreibung und Ablauf](#programmbeschreibung-und-ablauf)  
-3. [Screenshots](#screenshots)  
-4. [Reflexion](#reflexion)  
-5. [Code Review Mio Galli 10.01.2026](#code-review-mio-galli-10012026)  
-6. [Funktionalität](#funktionalität)  
-7. [Verständlichkeit](#verständlichkeit)  
-8. [Stärken](#stärken)  
-9. [Fazit](#fazit)
-10. [Instalation](#instalation)
-11. [Externe-Hilfe](#externe-hilfe)
-    
+## Table of Contents 
 
----
+- [Overview](#overview)
+- [Features](#Features)
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Installation](#installation)
 
-## Idee / Nutzen
 
-Die Idee für **PassGen** entstand, als mir bewusst wurde, dass ich selbst Passwort-Generatoren nutze, ohne wirklich zu wissen, was dahinter passiert. Das ließ mich unwohl fühlen, also entschloss ich mich, einen eigenen zu bauen, dem ich vertrauen kann.
+## Overview
 
-**PassGen** ist ein CLI-Tool zum Erstellen von **nicht vorhersehbaren und nicht geleakten Passwörtern**.
+More detailed description of the project.
 
-- Passwortlänge: 0–200 Zeichen  
-- Nach der Erstellung wird mit Hilfe von **HIBP (Have I Been Pwned)** überprüft, ob das Passwort bereits in einem Datenleck gefunden wurde.
+- Motivation / background
 
----
+  I wanted to creat a password generator because I wanted to make sure its secure.
+  I addet all the features I thougt were importend to include
 
-## Programmbeschreibung und Ablauf
+- Goals of the project
+  
+  1. Make sure the password is purly random
+  2. Making sure the password isn`t known
 
-### Start und Initialisierung
+<br>
 
-- Konsolentitel wird gesetzt  
-- Großes Zeichenalphabet wird definiert:  
-  - Groß- und Kleinbuchstaben  
-  - Zahlen  
-  - Sonderzeichen  
-  - Unicode-Symbole  
-  - Umlaute  
-- Dadurch hohe Entropie und Sicherheit der generierten Passwörter
 
-### Banner Ausgabe
+## Features
 
-- ASCII-Banner zu Beginn jedes Durchlaufs  
-- Reine optische Darstellung, ohne Einfluss auf die Programmlogik
+- Choosing Password length
+- Choos wether or not using spezial Unicodes for the password
+- Checking with [HIBP](https://haveibeenpwned.com/) if the password is known 
 
-### Benutzereingabe der Passwortlänge
+**Planed Feutures**
 
-- Benutzer wird aufgefordert, Passwortlänge einzugeben  
-- Standardwert: 20 Zeichen, wenn Eingabe ungültig oder leer  
-- Negative Werte → Standardwert  
-- Werte >200 → auf 200 begrenzt  
-- Easter Egg möglich (keine schädliche Überraschung, bleibt geheim)
+- Store the password in a local database
 
-### Erzeugung der Zufallsbasis
+<br>
 
-- SHA-256 Hash wird erzeugt aus:  
-  1. Externer API (Webcam-Input, live, selbst gehostet)  
-  2. Lokale kryptographisch sichere Zufallsdaten  
-- Kombination der beiden Hashes via **HMAC SHA-256**  
-- Fallback: rein lokale Zufallsdaten, falls API nicht erreichbar
+## Architecture
 
-### Aufbau des Passworts
+The application is a single-file, console-based password generator with a modular
+functional architecture. While implemented in one class, the program is conceptually
+split into clearly separated responsibilities.
 
-- Hash → Byte-Array  
-- Modulo-Operation auf Alphabet → Passwortzeichen  
-- Gleichmäßig verteiltes, zufälliges Passwort
+### High-Level Overview
 
-### Ausgabe des Passworts
+The program consists of four main conceptual layers:
 
-- Passwort wird in Konsole farblich hervorgehoben
+1. User Interface (Console I/O)
+2. Entropy & Password Generation
+3. Network & External Validation
+4. Utility & Cryptographic Functions
 
-### Überprüfung auf Datenlecks
+These layers interact linearly and do not share mutable global state.
 
-- SHA-1 Hash → HIBP API (K-Anonymity)  
-- Benutzer wird gewarnt, falls Passwort geleakt  
-- Positive Rückmeldung, wenn Passwort sicher
+<br>
 
-### Wiederholung des Programms
+### 1. User Interface Layer
 
-- Nach Tastendruck: neuer Ablauf, neues Passwort kann generiert werden
+Responsible for all user interaction via the console.
 
----
+Includes:
+- ASCII banner rendering
+- User input handling (password length, unicode selection)
+- Output formatting (password display, warnings, status messages)
+- Program loop and control flow
 
-## Screenshots
+This layer does not perform any cryptographic or network logic directly.
 
-**Programm bei Start:**  
-![Start](screenshots/start.png)
+<br>
 
-**Wenn Enter ohne Eingabe gedrückt:**  
-![Enter ohne Eingabe](screenshots/enter.png)
+### 2. Entropy & Password Generation Layer
 
-**Länge 2 gewählt, Passwort in Datenbank gefunden:**  
-![Länge 2](screenshots/length2.png)
+Responsible for generating cryptographically strong randomness and transforming it
+into a user-readable password.
 
-**Minuszahl eingegeben:**  
-![Minuszahl](screenshots/minus.png)
+Key concepts:
+- Multiple entropy sources (time-based data + system RNG)
+- SHA-256 hashing and HMAC combination
+- Deterministic expansion of entropy to arbitrary password lengths
+- Mapping raw entropy bytes to a configurable character lexicon
 
-**Über 200 eingegeben:**  
-![Über 200](screenshots/over200.png)
+The generator is designed to:
+- Avoid predictable patterns
+- Scale up to large password sizes
+- Remain independent of user input quality
 
-*(Screenshots bitte durch tatsächliche Bilder ersetzen)*
+<br>
 
----
+### 3. Network & External Validation Layer
 
-## Reflexion
+Responsible for optional online validation of generated passwords.
 
-Ich bin persönlich zufrieden mit dem bisher Geschaffenen:
+Includes:
+- Network availability check via ICMP (Ping)
+- Integration with the Have I Been Pwned (HIBP) API
+- k-Anonymity model (SHA-1 prefix querying)
 
-- Sinnvolles Programm zur Erstellung sicherer Passwörter  
-- Besonders gelungen: HIBP-Funktion  
+Design goals:
+- No plaintext password is ever transmitted
+- Graceful degradation when offline
+- Non-blocking behavior via async calls
 
-Schwierigkeiten:
+This layer is optional and does not affect password generation itself.
 
-- Einbindung von APIs in C# war zunächst herausfordernd  
-- Nächstes Mal: GUI für 0815-Nutzer planen  
-- Möglichkeit für Nutzer-Feedback via GitHub, um Funktionen einzubinden
+<br>
 
----
+### 4. Utility & Cryptographic Functions
 
-## Code Review Mio Galli 10.01.2026
+Low-level helpers used by higher layers.
 
-### Funktionalität
+Includes:
+- Cryptographic hash functions (SHA-1, SHA-256, HMAC)
+- Secure random number generation
+- Time-based entropy helpers
+- Formatting and conversion utilities
 
-- Läuft fehlerfrei  
-- Erfüllt alle Aufgaben  
-- Nutzerinteraktionen gut gestaltet und verständlich
+These functions are stateless and reusable.
 
-### Verständlichkeit
+<br>
 
-- Gut lesbarer und strukturierter Code  
-- Sinnvolle Variablen- und Funktionsnamen  
-- Kommentare passend platziert
+### Design Characteristics
 
-### Stärken
+- Single-process, single-threaded execution model
+- Stateless password generation (no persistence)
+- Defensive error handling with fallbacks
+- Clear separation between generation and validation
+- Console-first, platform-agnostic design
 
-- Gut gewählte Variablennamen  
-- Saubere Struktur  
-- Starkes Error Handling
+This architecture favors clarity, security, and predictability over abstraction
+or framework complexity.
 
-### Schwächen
 
-- Rechtschreibfehler im Code  
-- Keine Möglichkeit, zwischen normalen und Sonder-Unicodes zu wählen
+## Requirements
 
----
+What is required to build or run the project?
 
-## Fazit
+- You need Linux or Windows
 
-- Code übertrifft die Anforderungen  
-- Gute Fehlerbehandlung  
-- Nutzung von APIs, Hashing und HMAC  
-- Strukturierter und gut lesbarer Code  
+<br>
 
-Insgesamt zeigt der Code ein gutes Verständnis für saubere Programmierung und sicheren Umgang mit den verwendeten Technologien.
+## Installation
 
----
-
-## Lizenz & Attribution
-
-**MIT-Lizenz (Attribution erforderlich)**  
-
-Du darfst **PassGen** frei verwenden, modifizieren und weitergeben, **solange Nevio als ursprünglicher Autor erwähnt wird**.
-
-```text
-Copyright (c) 2026 Nevio
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
-provided that the above copyright notice and this permission notice are included
-in all copies or substantial portions of the Software.
-```
----
-
-## Instalation
 **Windows**
-1. Gehen sie auf Release
-2. Laden sie sich die neuste version runter ```Passgen-windows.exe```
-3.Starten sie dass Programm durch Doppel-Klick auf ```Passgen-windows.exe```
-
+  1. Download the ``Passgen_windows.exe`` file from the latest release.
+  2. Start the programm by clicking the exe. Or Open Powershell navigate to the folder with the exe and execute
+  ```bash
+  start Passgen_windows.exe
+  ```
 **Linux**
-1. Gehen sie auf Release
-2. Laden sie sich dass neuste binary runter ```Passgen-linux-binary```
-3. Navigieren sie zum Donwload Ordner
-4. Öfnnen sie dass terminal und geben sie mit diesem befehl die nötigen berechtigungen
-``` bash
 
-sudo chmod +x Passgen-linux-binary
-
-```
-
-6. Starten sie dass Programm mit
-```bash
-./Passgen-linux-binary
-```
----
-## Externe-Hilfe
-Beim Erstellen des Codes habe ich folgende Hilfen genutzt:
-- Online‑Dokumentation zur HIBP‑API und SHA‑Hash‑Methoden
-- StackOverflow zur Fehlersuche bei API‑Anfragen
-- ChatGPT für Textformulierungen und Strukturierung des READMEs
-
-Ich habe **keine KI‑generierten Code‑Blöcke verwendet**, sondern nur zur **Sprachhilfe** und zur Erklärung von Konzepten.
+  ``Binary``
+  1. Download the ``Passgen_linux`` from the latest releases 
+  2. Open your terminal and navigate to the folder with the binary then insert the following command 
+  ```
+  sudo chmod +x Passgen_linux
+  ```
+  3. Now you can execute the with
+  ```bash
+  ./Passgen_linux
+  ```
 
 
-
+  ``Deb``
+  1. Download ``passgen_x.x.x_amd64.deb`` from the latest release 
+  2. Install it with 
+  ```
+  sudo apt install ./passgen_x.x.x_amd64.deb
+  ```
+  3. Now you can execute the programm by typing ``passgen`` in your terminal
 
